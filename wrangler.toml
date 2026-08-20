@@ -17,5 +17,5 @@ compatibility_date = "2026-08-20"
 directory = "./dist"
 
 [[routes]]
-pattern = "otter.stoatworks-labs.com"
+pattern = "otter-edid.stoatworks-labs.com"
 custom_domain = true
