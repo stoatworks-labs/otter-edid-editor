@@ -14,6 +14,7 @@ import {
   ESTABLISHED_III_MODES,
   STD_ASPECTS,
 } from './tables.ts'
+import type { Timing } from '../timing/types.ts'
 import { hTotal, vTotal } from '../timing/types.ts'
 import { encodeCta } from './cta861.ts'
 import { encodeDisplayId } from './displayid.ts'
@@ -176,6 +177,35 @@ export function encodeDtd(d: DetailedTimingDescriptor): number[] {
     u8('vBorder', d.vBorder),
     flags,
   ]
+}
+
+/**
+ * Why this timing will not fit an 18-byte detailed timing descriptor, or null
+ * if it does fit.
+ *
+ * The clock ceiling is the famous one, but it is NOT the only limit and often
+ * not the one that bites first: active and blanking are 12-bit fields, so
+ * anything wider than 4095 pixels is out no matter how slow it is. An
+ * 8192x1080 @60 wide format — which Analog Way advertise on the Aquilon input
+ * cards — has a perfectly ordinary 594 MHz clock and still cannot be a DTD.
+ */
+export function dtdLimit(t: Timing): string | null {
+  const hBlank = t.hFront + t.hSync + t.hBack
+  const vBlank = t.vFront + t.vSync + t.vBack
+  const clock10k = Math.round(t.pixelClockHz / 10000)
+
+  if (clock10k > 65535) {
+    return `a ${(t.pixelClockHz / 1e6).toFixed(2)} MHz pixel clock is above the 655.35 MHz a detailed timing descriptor can state`
+  }
+  if (t.hActive > 4095) return `${t.hActive} active pixels exceeds the descriptor's 12-bit field (4095 max)`
+  if (t.vActive > 4095) return `${t.vActive} active lines exceeds the descriptor's 12-bit field (4095 max)`
+  if (hBlank > 4095) return `${hBlank} pixels of horizontal blanking exceeds the descriptor's 12-bit field`
+  if (vBlank > 4095) return `${vBlank} lines of vertical blanking exceeds the descriptor's 12-bit field`
+  if (t.hFront > 1023) return `a ${t.hFront} pixel front porch exceeds the descriptor's 10-bit field`
+  if (t.hSync > 1023) return `a ${t.hSync} pixel sync width exceeds the descriptor's 10-bit field`
+  if (t.vFront > 63) return `a ${t.vFront} line front porch exceeds the descriptor's 6-bit field`
+  if (t.vSync > 63) return `a ${t.vSync} line sync width exceeds the descriptor's 6-bit field`
+  return null
 }
 
 /** How much the DTD's 10 kHz grid moved the clock, in Hz. */

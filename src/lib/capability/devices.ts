@@ -185,6 +185,7 @@ export const DEVICES: Device[] = [
     role: 'sink',
     standards: ['gtf', 'cvt', 'dmt', 'manual'],
     capacityModes: [],
+    inheritsFrom: 'aw-livecore-ascender',
     notes: ['Same input architecture and the same 165/330 MHz ceilings as the Ascender — one shared LiveCore platform.'],
     confidence: 'documented',
     citations: [
@@ -204,6 +205,7 @@ export const DEVICES: Device[] = [
     role: 'sink',
     standards: ['gtf', 'cvt', 'dmt', 'manual'],
     capacityModes: [],
+    inheritsFrom: 'aw-livecore-ascender',
     notes: ['Same LiveCore input platform: 165 MHz single-link, 330 MHz dual-link.'],
     confidence: 'documented',
     citations: [
@@ -880,10 +882,17 @@ export const DEVICES: Device[] = [
   },
 ]
 
-/** Devices that share another device's platform carry no modes of their own. */
+/**
+ * Resolve `inheritsFrom` into real modes.
+ *
+ * Only an explicit pointer counts. A device with no modes and no pointer keeps
+ * none, and the evaluator reports 'unknown' for it — which is what an EX
+ * chassis deserves, because its answer depends entirely on which generation of
+ * card is fitted.
+ */
 export function resolveModes(d: Device): Device {
-  if (d.capacityModes.length > 0) return d
-  const donor = DEVICES.find((x) => x.family === d.family && x.capacityModes.length > 0)
+  if (d.capacityModes.length > 0 || !d.inheritsFrom) return d
+  const donor = DEVICES.find((x) => x.id === d.inheritsFrom)
   return donor ? { ...d, capacityModes: donor.capacityModes } : d
 }
 

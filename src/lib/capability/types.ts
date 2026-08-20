@@ -88,6 +88,17 @@ export interface Device {
   maxHActive?: number
   maxVActive?: number
   capacityModes: CapacityMode[]
+  /**
+   * Take another device's capacity modes verbatim, by id.
+   *
+   * For models that genuinely ARE the same input platform under a different
+   * name — a NeXtage is a LiveCore. Deliberately explicit rather than matched
+   * on `family`: an EX chassis is in the Event Master family but accepts either
+   * generation of card, so guessing by family handed it the Gen 1 dual-cable
+   * answer and stated it as fact. A device with neither modes nor an
+   * inheritsFrom reports 'unknown', which is the honest answer.
+   */
+  inheritsFrom?: string
   notes: string[]
   confidence: Confidence
   citations: Citation[]

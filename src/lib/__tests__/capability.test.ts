@@ -37,11 +37,22 @@ describe('data integrity', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('platform-sharing models inherit their family\'s modes', () => {
-    // NeXtage carries no modes of its own; it must pick up the Ascender's.
+  it('platform-sharing models inherit only from an explicit pointer', () => {
+    // NeXtage IS a LiveCore, and says so.
     const nextage = dev('aw-livecore-nextage')
-    expect(nextage.capacityModes.length).toBeGreaterThan(0)
+    expect(nextage.inheritsFrom).toBe('aw-livecore-ascender')
     expect(nextage.capacityModes.map((m) => m.id)).toContain('dual')
+
+    // An EX chassis takes either generation of card, so it must NOT be handed
+    // one generation's answer as if it were fact.
+    const ex = dev('barco-ex')
+    expect(ex.inheritsFrom).toBeUndefined()
+    expect(ex.capacityModes).toEqual([])
+  })
+
+  it('an EX chassis reports unknown rather than a card generation it may not have', () => {
+    const v = evaluateDevice(dev('barco-ex'), p2160p60, sig())
+    expect(v.status).toBe('unknown')
   })
 })
 
