@@ -9,5 +9,18 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!--
+      Support footer. Vendored from stoatworks-backend/support-footer — edit it
+      there and re-run scripts/sync-support-footer.sh, never here.
+      Classic + defer on purpose: it reads its config off this tag, and
+      document.currentScript is null inside a module.
+    -->
+    <script
+      src="/support-footer.js"
+      defer
+      data-app="Otter EDID Editor"
+      data-repo="https://github.com/stoatworks-labs/otter-edid-editor"
+      data-note="It runs entirely in your browser — no account, and no EDID of yours is uploaded."
+    ></script>
   </body>
 </html>

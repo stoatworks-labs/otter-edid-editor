@@ -153,3 +153,14 @@ details.cite blockquote cite { display: block; color: var(--unknown); font-style
 .filters button[aria-pressed='true'] { border-color: var(--accent); color: var(--text); }
 
 .scroll { max-height: 620px; overflow-y: auto; }
+
+/*
+ * The shared Stoatworks support footer appends itself to <body>, outside .app,
+ * so it does not inherit the page gutter. Match it, and let the footer draw its
+ * own rule and chips from currentColor as it is designed to.
+ */
+.sw-support {
+  max-width: 1680px;
+  margin-left: auto;
+  margin-right: auto;
+}
