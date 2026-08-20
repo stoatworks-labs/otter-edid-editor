@@ -2,6 +2,8 @@
 
 # Otter EDID Editor
 
+**Live at [otter-edid.stoatworks-labs.com](https://otter-edid.stoatworks-labs.com)** — nothing to install.
+
 A browser EDID editor for event video. Build an EDID from a resolution and a
 refresh rate, or edit every field by hand — then see which processors will
 actually take it, and in which mode.
