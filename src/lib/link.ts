@@ -30,6 +30,14 @@ export interface SignalOptions {
    *  component). 12 bpp is the usual visually-lossless target for 4:4:4. */
   dsc: boolean
   dscTargetBpp: number
+  /** Variable refresh rate (VRR / VFR). Costs no bandwidth at the stated rate —
+   *  it is a capability the sink advertises and the link must support, not a
+   *  higher clock — so it gates which interface version is required without
+   *  changing the payload. */
+  vrr: boolean
+  /** The VRR window, in Hz, written into the HDMI Forum VSDB. */
+  vrrMinHz: number
+  vrrMaxHz: number
 }
 
 export const DEFAULT_SIGNAL: SignalOptions = {
@@ -37,6 +45,9 @@ export const DEFAULT_SIGNAL: SignalOptions = {
   bpc: 8,
   dsc: false,
   dscTargetBpp: 12,
+  vrr: false,
+  vrrMinHz: 24,
+  vrrMaxHz: 60,
 }
 
 /**
