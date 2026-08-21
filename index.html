@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Otter EDID Editor</title>
     <meta name="description" content="Build, edit and check EDIDs in the browser — nothing is uploaded." />
+      <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- iOS ignores the manifest's icons and wants a PNG of its own. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Tints the status bar when installed. Two, so it follows the theme. -->
+    <meta name="theme-color" content="#12151a" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#12151a" media="(prefers-color-scheme: dark)" />
   </head>
   <body>
     <div id="root"></div>
