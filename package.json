@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Browser EDID editor — build an EDID from a resolution and refresh rate, or edit every field by hand, then check it against Analog Way, Barco and PixelHue hardware.",
+  "description": "Browser EDID editor \u2014 build an EDID from a resolution and refresh rate, or edit every field by hand, then check it against Analog Way, Barco and PixelHue hardware.",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
@@ -15,13 +15,13 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.0.4",
     "jsdom": "^30.0.1",
     "typescript": "^7.0.2",
