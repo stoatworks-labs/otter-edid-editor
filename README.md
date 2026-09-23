@@ -2,7 +2,8 @@
 > The timing engine is checked against published VESA DMT values and the DisplayID Type VII layout
 > against the Linux kernel's own parser. **No EDID this tool produced has ever been loaded into a
 > display, a source or a processor**, and the twenty-one-model compatibility table is vendor
-> paperwork — cited per claim, but never tried against the hardware it describes. See
+> paperwork — cited per claim, but never tried against the hardware it describes. Mosaic mode
+> reproduces another tool's Mac-tested files byte for byte; Otter has not tested them itself. See
 > [What is verified, and what is not](#what-is-verified-and-what-is-not).
 
 # Otter EDID Editor
@@ -19,7 +20,7 @@ Nothing is uploaded. There is no backend to upload it to.
 
 <sub>An 8192 × 1080 @ 60 EDID built in Simple mode: the CVT-RB v2 raster it needed, a 551 MHz pixel clock that puts it past HDMI 1.4, the minimum interface per standard, and the per-processor table saying which will take it — every row from the vendor's own documents, none of it tried against hardware.</sub>
 
-## Two modes
+## Three modes
 
 **Simple.** Type a resolution and a refresh rate, name it, press Calculate. You
 get a complete, valid EDID 1.4: the mode as a detailed timing, a range-limits
@@ -31,7 +32,22 @@ established and standard timings, all four descriptors, the CTA-861 extension
 (video and audio descriptors, HDMI and HDMI Forum vendor blocks, HDR static
 metadata, colorimetry, 4:2:0 maps) and a DisplayID 2.0 extension.
 
-Both modes name the EDID. Both show the same two answers on the right.
+**Mosaic.** One canvas split across two or four plugs, for frame-synced
+multi-output from a Mac. You give the whole canvas, the grid (2 × 1 or 2 × 2) and
+the rate; you get one EDID per plug, each carrying a DisplayID Tiled Display
+Topology block. A Mac that reads matching blocks on several connectors joins them
+into one display and drives them as one, so the seams cannot tear. Download them
+one by one or as a zip. Alongside: what macOS will make of the canvas (up to 6144
+wide on any recent macOS, up to 12288 on macOS 27, only 2 × 1 and 2 × 2 bond), and
+the cost and hardware table for the per-plug mode.
+
+The mosaic layout is not Otter's invention. It reproduces, byte for byte, a
+reference builder whose files have bonded on macOS 26 and 27. Its base and CTA
+blocks are a real display's EDID, because EDIDs built from scratch never bonded.
+A test pins the match against the reference's own output. The topology id is
+Stoatworks Labs' own (`SWK`).
+
+All three modes name the EDID. All three show the same two answers on the right.
 
 ## The two answers
 
@@ -80,9 +96,14 @@ Cloudflare static-assets Worker.
 ## What is verified, and what is not
 
 The timing engine is checked against published VESA DMT values, and the
-DisplayID Type VII layout against the Linux kernel's parser. The hardware table
-is vendor paperwork, cited per claim, and has **not** been tried against any
-hardware. See `AGENTS.md` for the honest breakdown.
+DisplayID Type VII and Tiled Display Topology layouts against the Linux kernel's
+parser. The hardware table is vendor paperwork, cited per claim, and has **not**
+been tried against any hardware. See `AGENTS.md` for the honest breakdown.
+
+Mosaic mode is the one exception to "never on hardware", and only at second hand:
+its layout is byte-identical to reference files reported bonding on macOS 26 and
+27. Otter has not loaded its own files into a Mac, and the macOS limits it quotes
+come from that testing, not ours.
 
 Not affiliated with Analog Way, Barco, PixelHue, Brompton, NovaStar, disguise or
 Green Hippo. Product names appear only to state compatibility.

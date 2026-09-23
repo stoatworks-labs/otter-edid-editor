@@ -14,7 +14,8 @@ export function primaryTiming(e: Edid): Timing | null {
   for (const ext of e.extensions) {
     if (ext.kind === 'displayid') {
       const d = ext as DisplayIdExtension
-      const pref = d.type7Timings.find((t) => t.preferred) ?? d.type7Timings[0]
+      const all = [...(d.type1Timings ?? []), ...d.type7Timings]
+      const pref = all.find((t) => t.preferred) ?? all[0]
       if (pref) return pref.timing
     }
   }

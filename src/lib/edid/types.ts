@@ -316,15 +316,50 @@ export interface DisplayIdTiming {
   fractional: boolean
 }
 
+/**
+ * Tiled Display Topology — the block that tells a source several connectors
+ * are one display. A host groups connectors by `topologyId` and places each by
+ * its location; every tile of one display must carry the same id, grid and
+ * tile size, and a different location.
+ */
+export interface TiledTopology {
+  /** Byte 0 verbatim. Bit 7 = all tiles in one physical enclosure; the rest
+   *  describe behaviour when only some tiles are driven. Kept whole because
+   *  the Mac-bonding reference sets 0x0A and nothing proves which bits matter. */
+  capabilities: number
+  /** Grid, as counts (1-based). */
+  hTiles: number
+  vTiles: number
+  /** This tile's place in the grid, 0-based from the top left. */
+  hLocation: number
+  vLocation: number
+  /** One tile's active area, in pixels. */
+  tileWidth: number
+  tileHeight: number
+  /** Bytes 8-12 verbatim: pixel multiplier, then top/bottom/right/left bezel. */
+  bezel: number[]
+  /** Bytes 13-21 verbatim: 3 ASCII vendor letters, 2 product bytes, 4 serial
+   *  bytes. Compared as bytes by hosts, so kept as bytes here. */
+  topologyId: number[]
+}
+
 export interface DisplayIdExtension {
   kind: 'displayid'
-  /** 0x20 = DisplayID 2.0. */
+  /** 0x20 = DisplayID 2.0; 0x12 = DisplayID 1.3. The version decides which
+   *  tag numbers the data blocks use. */
   version: number
   primaryUseCase: number
   /** Further DisplayID sections beyond this one. Almost always 0. */
   extensionCount: number
-  /** Type VII timings — the 20-byte detailed descriptors. */
+  /** Type VII timings — the 20-byte detailed descriptors (DisplayID 2.0). */
   type7Timings: DisplayIdTiming[]
+  /** Type I timings — DisplayID 1.3's 20-byte descriptor, clock in 10 kHz. */
+  type1Timings?: DisplayIdTiming[]
+  tiled?: TiledTopology
+  /** The section length byte as read. A section may declare more bytes than
+   *  its blocks use (zero-padded to fill the extension); re-encoding to the
+   *  shorter length would change bytes a real host has accepted. */
+  sectionLength?: number
   /** Display Interface Features data block. */
   interfaceFeatures?: {
     /** Bits per colour supported over the native interface. */

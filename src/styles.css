@@ -164,3 +164,11 @@ details.cite blockquote cite { display: block; color: var(--unknown); font-style
   margin-left: auto;
   margin-right: auto;
 }
+
+/* Mosaic: one row per plug, the selected one drives the byte view. */
+table.tiles { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 6px; }
+table.tiles th { text-align: left; color: var(--dim); font-weight: 500; font-size: 11px; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+table.tiles td { padding: 6px 8px; border-bottom: 1px solid #232a35; cursor: pointer; }
+table.tiles tr:hover td { background: #1e2530; }
+table.tiles tr[aria-selected='true'] td { background: rgba(95,176,216,0.10); }
+.mono { font-family: var(--mono); }

@@ -29,29 +29,47 @@ function render(bytes: Uint8Array, fmt: Format, name: string): string {
   }
 }
 
-const slug = (s: string) =>
+export function saveBytes(bytes: Uint8Array, filename: string, type = 'application/octet-stream') {
+  const blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export const slug = (s: string) =>
   (s || 'edid').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'edid'
 
 export function HexView({
   edid,
+  raw,
   name,
   onLoad,
+  title,
 }: {
-  edid: Edid
+  edid?: Edid
+  /** Exact bytes to show instead of encoding `edid` — for files that must
+   *  not pass through the encoder, like a mosaic tile. */
+  raw?: Uint8Array
   name: string
-  onLoad: (data: Uint8Array | string) => void
+  onLoad?: (data: Uint8Array | string) => void
+  title?: string
 }) {
   const [fmt, setFmt] = useState<Format>('xxd')
   const [copied, setCopied] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const built = useMemo(() => {
+    if (raw) return { bytes: raw, error: null as string | null }
+    if (!edid) return { bytes: null, error: 'nothing to show' }
     try {
       return { bytes: encodeEdid(edid), error: null as string | null }
     } catch (e) {
       return { bytes: null, error: e instanceof Error ? e.message : String(e) }
     }
-  }, [edid])
+  }, [edid, raw])
 
   if (built.error || !built.bytes) {
     return (
@@ -64,19 +82,12 @@ export function HexView({
   }
 
   const bytes = built.bytes
+  const blocks = Math.ceil(bytes.length / 128)
   const text = render(bytes, fmt, slug(name))
 
-  const download = () => {
-    // Binary is the only format any EDID writer actually eats, so it is a real
-    // .bin blob rather than a text file with a .bin extension.
-    const blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/octet-stream' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${slug(name)}.bin`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  // Binary is the only format any EDID writer actually eats, so it is a real
+  // .bin blob rather than a text file with a .bin extension.
+  const download = () => saveBytes(bytes, `${slug(name)}.bin`)
 
   const downloadText = () => {
     const blob = new Blob([text], { type: 'text/plain' })
@@ -89,9 +100,7 @@ export function HexView({
   }
 
   return (
-    <Panel
-      title={`EDID bytes — ${bytes.length} bytes, ${1 + edid.extensions.length} block${edid.extensions.length ? 's' : ''}`}
-    >
+    <Panel title={title ?? `EDID bytes — ${bytes.length} bytes, ${blocks} block${blocks > 1 ? 's' : ''}`}>
       <div className="row" style={{ marginBottom: 10 }}>
         {(['xxd', 'hex', 'c'] as Format[]).map((f) => (
           <button key={f} className="minor" aria-pressed={fmt === f} onClick={() => setFmt(f)}>
@@ -110,6 +119,7 @@ export function HexView({
         </button>
       </div>
 
+      {onLoad ? (
       <div className="row" style={{ marginBottom: 10 }}>
         <button className="minor" onClick={() => fileRef.current?.click()}>
           Open an EDID…
@@ -128,11 +138,12 @@ export function HexView({
             const buf = new Uint8Array(await f.arrayBuffer())
             // A real EDID always starts 00 FF FF FF; anything else is text.
             const isBinary = buf[0] === 0x00 && buf[1] === 0xff && buf[2] === 0xff
-            onLoad(isBinary ? buf : new TextDecoder().decode(buf))
+            onLoad?.(isBinary ? buf : new TextDecoder().decode(buf))
             e.target.value = ''
           }}
         />
       </div>
+      ) : null}
 
       <pre className="hex">{text}</pre>
     </Panel>

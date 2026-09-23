@@ -2,7 +2,7 @@
 
 ## Standards
 
-Implements VESA E-EDID, VESA DisplayID 2.0, VESA CVT, VESA GTF, VESA DMT and
+Implements VESA E-EDID, VESA DisplayID 1.3 and 2.0, VESA CVT, VESA GTF, VESA DMT and
 CTA-861. This project is not affiliated with or endorsed by VESA or CTA, and
 does not redistribute any part of those specifications.
 
@@ -15,6 +15,15 @@ does not redistribute any part of those specifications.
   standard was confirmed against it.
 - **edid-decode** — its published reading of the HDMI Forum vendor-specific
   data block informed the bit assignments in `src/lib/edid/cta861.ts`.
+- The same kernel sources (`struct displayid_tiled_block`,
+  `drm_parse_tiled_block()`) were read on 2026-09-23 to confirm the Tiled
+  Display Topology layout and the DisplayID 1.3 block tags.
+
+## Mosaic reference
+
+The base and CTA-861 blocks embedded in `src/lib/mosaic.ts` come from a PixelHue
+Q8's EDID, used as the known-good starting point for tiled EDIDs that a Mac will
+bond.
 
 ## Vendor documentation
 

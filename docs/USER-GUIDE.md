@@ -18,7 +18,7 @@ Nothing is uploaded. There is no backend to upload it to.
 
 ---
 
-## Two modes
+## Three modes
 
 **Simple.** Type a resolution and a refresh rate, name it, press Calculate. You get a complete,
 valid EDID 1.4: the mode as a detailed timing, a range-limits descriptor **sized to it**, the name
@@ -29,7 +29,21 @@ one.
 timings, all four descriptors, the CTA-861 extension — video and audio descriptors, HDMI and HDMI
 Forum vendor blocks, HDR static metadata, colorimetry, 4:2:0 maps — and a DisplayID 2.0 extension.
 
-Both modes name the EDID, and both show the same two answers on the right.
+**Mosaic.** For frame-synced output from a Mac across several plugs. Give the whole canvas, the
+grid — **2 × 1** or **2 × 2** — and the rate. You get **one EDID per plug**: load `left.bin` on the
+input the Mac's left-hand output feeds and `right.bin` on the other (for 2 × 2, `tile_r1_c1.bin` is
+the top left). Each carries a DisplayID Tiled Display Topology block. A Mac that finds matching
+blocks on its outputs joins them into **one display**, drives them together, and the seams do not
+tear. If the Mac lists the plugs as separate displays, they have not bonded and are not in sync.
+
+- Up to **6144 wide** bonds on any recent macOS; up to **12288** needs **macOS 27**.
+- Each plug is at most 6144 wide. Three or four across never bonds on a Mac.
+- A second mosaic on the same Mac needs a different **mosaic number** — the Mac groups plugs by it.
+
+The layout copies, byte for byte, reference files that have bonded on macOS 26 and 27. Otter has not
+loaded its own files into a Mac.
+
+All three modes name the EDID, and all three show the same two answers on the right.
 
 ---
 

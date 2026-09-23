@@ -10,6 +10,9 @@ import type { ColorFormat, SignalOptions } from './lib/link.ts'
 import { displayName, primaryTiming, setDisplayName } from './lib/primary.ts'
 import { timingLabel } from './lib/timing/types.ts'
 import { SimpleMode } from './components/SimpleMode.tsx'
+import { MosaicChecks, MosaicMode } from './components/MosaicMode.tsx'
+import type { MosaicRequest } from './lib/mosaic.ts'
+import { buildMosaic, checkMosaic, DEFAULT_MOSAIC, mosaicErrors } from './lib/mosaic.ts'
 import { AdvancedMode } from './components/AdvancedMode.tsx'
 import { LinkSummary } from './components/LinkSummary.tsx'
 import { SupportMatrix } from './components/SupportMatrix.tsx'
@@ -72,7 +75,19 @@ function SignalStrip({ signal, onChange }: { signal: SignalOptions; onChange: (s
 }
 
 export default function App() {
-  const [mode, setMode] = useState<'simple' | 'advanced'>('simple')
+  const [mode, setMode] = useState<'simple' | 'advanced' | 'mosaic'>('simple')
+  const [mosaicReq, setMosaicReq] = useState<MosaicRequest>(DEFAULT_MOSAIC)
+  const [tileIdx, setTileIdx] = useState(0)
+  const mosaic = useMemo(() => {
+    const errors = mosaicErrors(mosaicReq)
+    if (errors.length) return { errors, result: null }
+    try {
+      return { errors, result: buildMosaic(mosaicReq) }
+    } catch (e) {
+      return { errors: [e instanceof Error ? e.message : String(e)], result: null }
+    }
+  }, [mosaicReq])
+  const tile = mosaic.result?.tiles[Math.min(tileIdx, mosaic.result.tiles.length - 1)]
   const [req, setReq] = useState<SimpleRequest>(INITIAL)
   const [edid, setEdid] = useState<Edid>(() => buildEdid(INITIAL).edid)
   const [notes, setNotes] = useState<string[]>(() => buildEdid(INITIAL).notes)
@@ -113,6 +128,9 @@ export default function App() {
         <button aria-selected={mode === 'advanced'} onClick={() => setMode('advanced')}>
           Advanced
         </button>
+        <button aria-selected={mode === 'mosaic'} onClick={() => setMode('mosaic')}>
+          Mosaic
+        </button>
       </div>
 
       {issues.length ? (
@@ -127,7 +145,16 @@ export default function App() {
 
       <div className="cols">
         <div>
-          {mode === 'simple' ? (
+          {mode === 'mosaic' ? (
+            <MosaicMode
+              req={mosaicReq}
+              onChange={(r) => { setMosaicReq(r); if (r.cols * r.rows !== mosaicReq.cols * mosaicReq.rows) setTileIdx(0) }}
+              result={mosaic.result}
+              errors={mosaic.errors}
+              selected={tileIdx}
+              onSelect={setTileIdx}
+            />
+          ) : mode === 'simple' ? (
             <SimpleMode req={req} onChange={setReq} onBuild={build} notes={notes} />
           ) : (
             <>
@@ -152,6 +179,18 @@ export default function App() {
           )}
         </div>
 
+        {mode === 'mosaic' ? (
+          <div>
+            <MosaicChecks checks={checkMosaic(mosaicReq)} />
+            {mosaic.result && tile ? (
+              <>
+                <LinkSummary timing={mosaic.result.tileTiming} signal={{ ...req.signal, bpc: mosaicReq.bitDepth }} />
+                <SupportMatrix timing={mosaic.result.tileTiming} signal={{ ...req.signal, bpc: mosaicReq.bitDepth }} />
+                <HexView raw={tile.bytes} name={tile.file.replace(/\.bin$/, '')} title={`${tile.file} — ${tile.bytes.length} bytes, 3 blocks`} />
+              </>
+            ) : null}
+          </div>
+        ) : (
         <div>
           {mode === 'advanced' ? (
             <SignalStrip signal={req.signal} onChange={(signal) => setReq({ ...req, signal })} />
@@ -192,6 +231,7 @@ export default function App() {
             </div>
           </Panel>
         </div>
+        )}
       </div>
     </div>
   )
