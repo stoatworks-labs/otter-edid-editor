@@ -18,6 +18,9 @@ import { LinkSummary } from './components/LinkSummary.tsx'
 import { SupportMatrix } from './components/SupportMatrix.tsx'
 import { HexView } from './components/HexView.tsx'
 import { Check, Panel, Pick } from './components/ui.tsx'
+import { HostPanel } from './components/HostPanel.tsx'
+import { encodeEdid } from './lib/edid/encode.ts'
+import type { EdidHost } from './host.ts'
 
 const INITIAL: SimpleRequest = {
   name: 'UHD-2160p60',
@@ -74,8 +77,19 @@ function SignalStrip({ signal, onChange }: { signal: SignalOptions; onChange: (s
   )
 }
 
-export default function App() {
-  const [mode, setMode] = useState<'simple' | 'advanced' | 'mosaic'>('simple')
+/** Opening on a host's slot: its bytes, decoded once, in advanced mode. */
+function opening(host?: EdidHost) {
+  if (!host?.initial) return null
+  try {
+    return parseEdidFile(host.initial.bytes)
+  } catch {
+    return null
+  }
+}
+
+export default function App({ host }: { host?: EdidHost } = {}) {
+  const [opened] = useState(() => opening(host))
+  const [mode, setMode] = useState<'simple' | 'advanced' | 'mosaic'>(opened ? 'advanced' : 'simple')
   const [mosaicReq, setMosaicReq] = useState<MosaicRequest>(DEFAULT_MOSAIC)
   const [tileIdx, setTileIdx] = useState(0)
   const mosaic = useMemo(() => {
@@ -89,9 +103,9 @@ export default function App() {
   }, [mosaicReq])
   const tile = mosaic.result?.tiles[Math.min(tileIdx, mosaic.result.tiles.length - 1)]
   const [req, setReq] = useState<SimpleRequest>(INITIAL)
-  const [edid, setEdid] = useState<Edid>(() => buildEdid(INITIAL).edid)
-  const [notes, setNotes] = useState<string[]>(() => buildEdid(INITIAL).notes)
-  const [issues, setIssues] = useState<DecodeIssue[]>([])
+  const [edid, setEdid] = useState<Edid>(() => opened?.edid ?? buildEdid(INITIAL).edid)
+  const [notes, setNotes] = useState<string[]>(() => (opened ? [] : buildEdid(INITIAL).notes))
+  const [issues, setIssues] = useState<DecodeIssue[]>(() => opened?.issues ?? [])
 
   const primary = useMemo(() => primaryTiming(edid), [edid])
   const name = displayName(edid)
@@ -102,6 +116,22 @@ export default function App() {
     setNotes(r.notes)
     setIssues([])
   }
+
+  /* What the host panel would write. Encoded here rather than in the panel so
+     a mosaic's tiles go through as the exact bytes they were built as — a tile
+     must never pass through the encoder. */
+  const outgoing = useMemo(() => {
+    if (!host) return []
+    if (mode === 'mosaic') {
+      if (!mosaic.result) return [{ label: 'The mosaic', bytes: null, error: mosaic.errors[0] ?? null }]
+      return mosaic.result.tiles.map((t) => ({ label: t.label, bytes: t.bytes }))
+    }
+    try {
+      return [{ label: name || 'This EDID', bytes: encodeEdid(edid) }]
+    } catch (e) {
+      return [{ label: name || 'This EDID', bytes: null, error: e instanceof Error ? e.message : String(e) }]
+    }
+  }, [host, mode, mosaic, edid, name])
 
   const load = (data: Uint8Array | string) => {
     const r = parseEdidFile(data)
@@ -181,6 +211,7 @@ export default function App() {
 
         {mode === 'mosaic' ? (
           <div>
+            {host ? <HostPanel host={host} items={outgoing} preferred={host.initial?.slotId} /> : null}
             <MosaicChecks checks={checkMosaic(mosaicReq)} />
             {mosaic.result && tile ? (
               <>
@@ -192,6 +223,7 @@ export default function App() {
           </div>
         ) : (
         <div>
+          {host ? <HostPanel host={host} items={outgoing} preferred={host.initial?.slotId} /> : null}
           {mode === 'advanced' ? (
             <SignalStrip signal={req.signal} onChange={(signal) => setReq({ ...req, signal })} />
           ) : null}
@@ -214,8 +246,9 @@ export default function App() {
 
           <Panel title="About">
             <div className="note">
-              Everything happens in this browser. No EDID is uploaded anywhere, and there is no backend to upload it
-              to.
+              {host
+                ? `Everything is built in this window. Nothing leaves it except what you save to ${host.title}.`
+                : 'Everything happens in this browser. No EDID is uploaded anywhere, and there is no backend to upload it to.'}
             </div>
             <div className="note" style={{ marginTop: 6 }}>
               The hardware table is built from vendor manuals and spec sheets, cited per claim. None of it has been

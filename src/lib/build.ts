@@ -133,6 +133,51 @@ export function solveTiming(req: SimpleRequest): { timing: Timing; standard: Tim
  */
 export function buildEdid(req: SimpleRequest): BuildResult {
   const { timing, standard, vic, notes } = solveTiming(req)
+  return edidAroundTiming(timing, { name: req.name, signal: req.signal, standard, vic, fractional: req.fractional, notes })
+}
+
+export interface TimingEdidOptions {
+  name: string
+  signal: SignalOptions
+  /** Where the timing came from; CVT and GTF make the range descriptor say so. */
+  standard: TimingStandard
+  /** The CTA VIC the timing is, when it is one — `vicFor` finds it. */
+  vic?: number
+  fractional?: boolean
+  notes?: string[]
+}
+
+/**
+ * The CTA VIC whose raster this timing is exactly, if any.
+ *
+ * Exact, not "same resolution and rate": a 1080p60 at CVT blanking is not
+ * VIC 16, and claiming it is would tell a source to send a raster the sink was
+ * never built around. The 1000/1001 variant of a VIC counts as the VIC.
+ */
+export function vicFor(t: Timing): number | undefined {
+  for (const c of CTA_TIMINGS) {
+    const whole: Timing = c
+    const fraction = { ...c, pixelClockHz: (c.pixelClockHz * 1000) / 1001 }
+    const sameRaster = (x: Timing) =>
+      x.hActive === t.hActive && x.hFront === t.hFront && x.hSync === t.hSync && x.hBack === t.hBack &&
+      x.vActive === t.vActive && x.vFront === t.vFront && x.vSync === t.vSync && x.vBack === t.vBack &&
+      x.interlaced === t.interlaced
+    // Within 0.1 %: a switcher states its clock to the kHz, a VIC to the Hz.
+    const close = (x: Timing) => Math.abs(x.pixelClockHz - t.pixelClockHz) <= x.pixelClockHz * 0.001
+    if (sameRaster(whole) && (close(whole) || (c.hasFractional && close(fraction)))) return c.vic
+  }
+  return undefined
+}
+
+/**
+ * Build a complete EDID around a timing that is already decided — a switcher's
+ * custom format, say, whose every porch was chosen by somebody on purpose and
+ * must not be re-derived. `buildEdid` is this after `solveTiming`.
+ */
+export function edidAroundTiming(timing: Timing, opts: TimingEdidOptions): BuildResult {
+  const { standard, vic } = opts
+  const notes = opts.notes ? [...opts.notes] : []
+  const req = { name: opts.name, signal: opts.signal, fractional: !!opts.fractional }
   const e = blankEdid()
 
   const rate = vFreq(timing)

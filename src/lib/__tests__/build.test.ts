@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildEdid } from '../build.ts'
+import { buildEdid, edidAroundTiming, vicFor } from '../build.ts'
 import type { SimpleRequest } from '../build.ts'
 import { DEFAULT_SIGNAL } from '../link.ts'
 import { encodeEdid } from '../edid/encode.ts'
@@ -173,5 +173,38 @@ describe('non-standard rasters', () => {
   it('marks continuous frequency for a generated timing, but not for a table lookup', () => {
     expect(buildEdid(req({ standard: 'cvt-rb2' })).edid.features.continuousFrequency).toBe(true)
     expect(buildEdid(req({ standard: 'cta' })).edid.features.continuousFrequency).toBe(false)
+  })
+})
+
+describe('edidAroundTiming — a timing somebody already chose', () => {
+  // A switcher custom format: CVT-ish blanking nobody would re-derive the same way.
+  const custom = {
+    hActive: 2560, hFront: 48, hSync: 32, hBack: 80,
+    vActive: 1440, vFront: 3, vSync: 5, vBack: 33,
+    pixelClockHz: 241_500_000, interlaced: false, hSyncPositive: true, vSyncPositive: false,
+  }
+
+  it('keeps every porch and the clock (to the EDID 10 kHz step)', () => {
+    const r = edidAroundTiming(custom, { name: 'CF1', signal: { ...DEFAULT_SIGNAL }, standard: 'manual' })
+    const back = primaryTiming(decodeEdid(encodeEdid(r.edid)).edid)!
+    expect({ ...back, pixelClockHz: 0 }).toEqual({ ...custom, pixelClockHz: 0 })
+    expect(Math.abs(back.pixelClockHz - custom.pixelClockHz)).toBeLessThan(10_000)
+  })
+
+  it('is what buildEdid produces for the same solved timing', () => {
+    const a = buildEdid(req())
+    const b = edidAroundTiming(a.timing, { name: 'Test', signal: { ...DEFAULT_SIGNAL }, standard: a.resolvedStandard, vic: a.vic })
+    expect([...encodeEdid(b.edid)]).toEqual([...encodeEdid(a.edid)])
+  })
+})
+
+describe('vicFor', () => {
+  const vic16 = buildEdid(req()).timing
+  it('finds the VIC for its exact raster, whole or 1000/1001', () => {
+    expect(vicFor(vic16)).toBe(16)
+    expect(vicFor({ ...vic16, pixelClockHz: (vic16.pixelClockHz * 1000) / 1001 })).toBe(16)
+  })
+  it('does not call a same-size raster with other blanking a VIC', () => {
+    expect(vicFor({ ...vic16, hFront: vic16.hFront + 8, hBack: vic16.hBack - 8 })).toBeUndefined()
   })
 })
