@@ -132,8 +132,9 @@ source says it learned on the bench, and what this mode repeats:
 - **Only its reference base+CTA bonded.** A PixelHue Q8 EDID, patched in six places.
   The reference's first version synthesised base+CTA and no Mac ever bonded on those files. So
   nothing in the reference is tidied, and Otter's own encoder never touches a tile —
-  its CTA encoder reorders data blocks, so a decode/encode of that block changes 88
-  bytes (found while checking the round-trip, not by inspection).
+  its CTA encoder reordered data blocks, so a decode/encode of that block changed 88
+  bytes (found while checking the round-trip, not by inspection; fixed the same
+  day — see below — but the bypass stays).
 - **DisplayID 1.3, not 2.0.** Section version 0x12, a Type I timing (tag 0x03, 10 kHz
   clock) then Tiled Display (tag 0x12), section length declared as the full 121 with
   zero padding. Otter's decoder now keeps that declared length (`sectionLength`) —
@@ -153,3 +154,18 @@ source says it learned on the bench, and what this mode repeats:
   the registry assigns to Office Depot. Untested whether the Mac cares.
 
 Still true: **Otter has not loaded any of these into a Mac itself.**
+
+**A decoded CTA block saves back byte for byte since 2026-09-23.** The Q8 block broke
+the encoder two ways: its data blocks run video, audio, HDMI Forum VSDB, HDMI VSDB,
+video capability (the encoder puts HDMI before Forum and capability mid-list), and its
+HDMI Forum VSDB is 7 bytes where the encoder always writes the optional 8th (the
+ALLM/VRR flags byte). Either one moves the DTD offset, so every byte after it shifts.
+The fix records each block's key, bytes and a canonical (sorted-key) serialisation of
+the fields it decoded into, in `CtaExtension.source`; the encoder emits a block's
+original bytes while its fields still serialise the same. The UI edits by spreading,
+which is why the comparison ignores key order. All 12 mosaic fixture tiles (384 bytes,
+base + CTA + DisplayID 1.3) failed a whole-EDID round-trip before this and pass after.
+Still lossy on purpose: **editing** a block re-encodes it from the model, so bytes the
+model does not carry (HDMI VSDB latency fields, reserved bits) go with that edit.
+Also seen: the reference's base block claims two extensions (byte 126) for a 256-byte
+blob, because mosaic appends the third; the encoder writes the count it has.

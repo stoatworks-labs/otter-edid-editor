@@ -304,6 +304,41 @@ export interface CtaExtension {
   /** Anything parsed but not modelled, kept byte-exact so a decode/encode
    *  round-trip of a real device's EDID cannot lose data. */
   unknownBlocks: number[][]
+  /** How the block looked when it was decoded. Absent on anything built here. */
+  source?: CtaSource
+}
+
+/** Which model field a CTA data block feeds. */
+export type CtaBlockKey =
+  | 'video'
+  | 'audio'
+  | 'speaker'
+  | 'hdmi'
+  | 'hdmiForum'
+  | 'videoCapability'
+  | 'colorimetry'
+  | 'hdr'
+  | 'ycbcr420Only'
+  | 'ycbcr420Also'
+  | 'unknown'
+
+/**
+ * The layout of a decoded CTA block, so an import that is not edited saves
+ * back byte for byte. The encoder has its own block order and writes only the
+ * fields it models; a real device's EDID is under no obligation to match
+ * either. Each `model` is a canonical serialisation of the fields the block
+ * decoded into: while those still serialise the same, the original bytes go
+ * back out in their original place, reserved bits and all. Once a field is
+ * edited, that block alone is re-encoded, in the same place.
+ */
+export interface CtaSource {
+  /** The 127 bytes before the checksum, as read. */
+  bytes: number[]
+  /** The whole extension (less this field), serialised the same way. */
+  model: string
+  blocks: { key: CtaBlockKey; bytes: number[]; model: string }[]
+  /** Header byte 3's native-DTD count, which a sink need not set to "all". */
+  nativeDtds: number
 }
 
 export interface DisplayIdTiming {

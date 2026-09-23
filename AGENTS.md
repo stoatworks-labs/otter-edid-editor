@@ -70,12 +70,19 @@ src/components/    UI only. No arithmetic lives here.
   CTA blocks are a real display's EDID verbatim; EDIDs synthesised from scratch
   never bonded on a Mac, and nobody knows which reference bytes matter. Do not
   "clean up" `mosaic.ts`, do not swap its timing for `cvt.ts`, and never pass a
-  tile through `encodeEdid` — Otter's CTA encoder rewrites that block (it reorders
-  data blocks). `mosaic.test.ts` compares against the reference's own output.
+  tile through `encodeEdid` — the tiles now survive a decode/encode, but the claim
+  rests on the reference's bytes, not on the encoder. `mosaic.test.ts` compares
+  against the reference's own output.
 - **DisplayID tag numbers depend on the section version.** 1.3 (`0x12`): Type I
   timing `0x03`, tiled `0x12`. 2.0 (`0x20`): Type VII `0x22`, tiled `0x28`. Type I
   clocks are 10 kHz units, Type VII 1 kHz. A section may declare more bytes than
   its blocks use; `sectionLength` keeps that so a decode/encode does not shorten it.
+- **A decoded CTA block remembers its own layout (`CtaExtension.source`).** Real
+  EDIDs order data blocks their own way and carry bytes the model drops (a 7-byte
+  HDMI Forum VSDB, reserved bits). While a block's fields serialise as they did at
+  decode, its original bytes go back out in its original slot; an edited block is
+  re-encoded in that slot; an unedited extension is written back whole. Anything
+  that builds a CTA block from scratch has no `source` and gets the encoder's order.
 
 ## Verified vs assumed
 
@@ -94,7 +101,8 @@ src/components/    UI only. No arithmetic lives here.
 - Mosaic output is byte-identical to the reference builder's across five
   cases (2 x 1 and 2 x 2, 3840-12288 wide, 8- and 10-bit, fractional rate).
 - Every EDID the tool builds round-trips encode -> decode with no loss and a
-  valid checksum. 99 tests.
+  valid checksum. A real one read in (the PixelHue Q8 CTA block, every mosaic
+  fixture tile) saves back byte for byte when not edited. 116 tests.
 
 **Assumed, and NOT verified:**
 
@@ -104,9 +112,6 @@ src/components/    UI only. No arithmetic lives here.
   macOS 26 and 27 in the reference's testing, per its source comments (with a
   different topology id — Otter's is SWK/0x4F54). The macOS limits (6144 any
   version, 12288 on 27, only 2 x 1 and 2 x 2) are those findings, not ours.
-- **A decoded CTA extension does not re-encode byte for byte** when its data
-  blocks are in a different order from the encoder's. Opening a real device's
-  EDID and saving it again can change bytes. Mosaic mode avoids the encoder.
 - **CVT-RB v2 parameters** (80-px blanking, 8-line vsync, 1 kHz clock step) are
   from the CVT 1.2 description, not checked against a reference implementation
   the way v1 was. The relative ordering (v2 < v1 < standard) is tested; the

@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { blankEdid, emptyCta } from '../edid/defaults.ts'
 import { checksum, encodeDtd, encodeEdid, encodeManufacturer, EncodeError } from '../edid/encode.ts'
+import { decodeCta, encodeCta } from '../edid/cta861.ts'
+import tiles from './fixtures/reference-tiles.json'
 import { decodeEdid, parseEdidFile } from '../edid/decode.ts'
 import { decodeDtd } from '../edid/decode-dtd.ts'
 import { decodeType7Timing, encodeType7Timing } from '../edid/displayid.ts'
 import { ctaByVic } from '../timing/cta.ts'
 import { cvtRb } from '../timing/cvt.ts'
-import type { DetailedTimingDescriptor, DisplayIdExtension } from '../edid/types.ts'
+import type { CtaExtension, DetailedTimingDescriptor, DisplayIdExtension } from '../edid/types.ts'
 
 const dtdOf = (t: ReturnType<typeof cvtRb>): DetailedTimingDescriptor => ({
   kind: 'dtd',
@@ -230,6 +232,111 @@ describe('CTA extension', () => {
     cta.detailedTimings = new Array(8).fill(dtdOf(cvtRb(1920, 1080, { refreshHz: 60 })))
     e.extensions.push(cta)
     expect(() => encodeEdid(e)).toThrow(/overflows/)
+  })
+})
+
+// A real device's EDID: the PixelHue Q8 base + CTA that mosaic.ts carries as
+// REFERENCE_B64 (the same bytes, copied so a mosaic change cannot move this
+// test). Its CTA block lays its data blocks out in an order the encoder would
+// not choose (HDMI Forum VSDB before HDMI VSDB, video capability last) and
+// its HDMI Forum VSDB stops a byte short of the one the encoder writes.
+const PIXELHUE_Q8 = Uint8Array.from(
+  atob(
+    'AP///////wA59l7kAQEBAQIfAQTFAAB4GjExpVVOoSYMUFQlTwDRwLMAlQCBgIFAgcABAQEBTdAAoPBwPoAwIDUAX1khAAAY' +
+      'AAAA/QAX8A//PAAKICAgICAgAAAA/ABsZWZ0CiAgICAgICAgAAAAEQAAAAAAAAAAAAAAAAAAAnICAyV0SWtakB8iZmVkYyMP' +
+      'Bwdn2F3EAXiAAGcDDAAAADhE4gBPKGgAoPBwPoAwIDUAX1khAAAY72gAoKBALmAwIDYA4A4RAAAYNTyAoHCwI0AwIDYA4A4R' +
+      'AAAYAjqAGHE4LUBYLEUA4A4RAAAYAAAAAAAAAAAAAAAAAAAAAAAA9A==',
+  ),
+  (c) => c.charCodeAt(0),
+)
+const q8Cta = () => [...PIXELHUE_Q8.slice(128)]
+const ctaOf = (bytes: number[]) => decodeCta(bytes)
+const reencode = (ext: CtaExtension) => encodeCta(ext)
+/** The data block collection as a list of blocks, headers included. */
+function dataBlocks(b: number[]): number[][] {
+  const out: number[][] = []
+  // Offset 0 means no timings, so the blocks run until the zero padding.
+  const end = b[2] || 127
+  for (let i = 4; i < end && b[i]; i += 1 + (b[i] & 0x1f)) out.push(b.slice(i, i + 1 + (b[i] & 0x1f)))
+  return out
+}
+
+describe('decoding a real CTA block and saving it back', () => {
+  it('reproduces an unedited PixelHue Q8 CTA block byte for byte', () => {
+    const { edid } = decodeEdid(PIXELHUE_Q8)
+    // Only the CTA block: this copy's base block claims a second extension it
+    // does not carry, and the encoder writes the count it actually has.
+    expect([...encodeEdid(edid).slice(128)]).toEqual(q8Cta())
+  })
+
+  // Mosaic mode never re-encodes its tiles, but an imported one must survive
+  // the editor all the same: base, this CTA block, and the DisplayID block.
+  for (const c of tiles.cases) {
+    for (const t of c.tiles) {
+      it(`reproduces the mosaic tile ${t.file} whole`, () => {
+        const b = Uint8Array.from(t.hex.match(/../g)!.map((x) => parseInt(x, 16)))
+        expect([...encodeEdid(decodeEdid(b).edid)]).toEqual([...b])
+      })
+    }
+  }
+
+  it('keeps every untouched data block where it was when one header flag changes', () => {
+    const ext = ctaOf(q8Cta())
+    ext.basicAudio = false
+    const out = reencode(ext)
+    const want = q8Cta()
+    want[3] &= ~0x40
+    want[127] = checksum(want.slice(0, 127))
+    expect(out).toEqual(want)
+  })
+
+  it('re-encodes an edited block in its own slot and leaves the others alone', () => {
+    const orig = q8Cta()
+    const ext = ctaOf(orig)
+    ext.hdmiForumVsdb = { ...ext.hdmiForumVsdb!, maxTmdsCharacterRateMHz: 340 }
+    const before = dataBlocks(orig)
+    const after = dataBlocks(reencode(ext))
+    expect(after.map((b) => b[0] >> 5)).toEqual(before.map((b) => b[0] >> 5))
+    expect(after[2].slice(1, 4)).toEqual([0xd8, 0x5d, 0xc4])
+    expect(after[2][5]).toBe(340 / 5)
+    for (const k of [0, 1, 3, 4]) expect(after[k]).toEqual(before[k])
+    expect(decodeCta(reencode(ext)).detailedTimings).toEqual(ext.detailedTimings)
+  })
+
+  it('drops a removed block and appends a new one after the originals', () => {
+    const orig = q8Cta()
+    const ext = ctaOf(orig)
+    ext.audioDescriptors = []
+    ext.hdrStaticMetadata = {
+      eotfSdr: true,
+      eotfHdr: false,
+      eotfSmpte2084: true,
+      eotfHlg: false,
+      staticMetadataType1: true,
+    }
+    const before = dataBlocks(orig)
+    const after = dataBlocks(reencode(ext))
+    expect(after.slice(0, 4)).toEqual([before[0], ...before.slice(2)])
+    expect(after[4].slice(0, 2)).toEqual([0xe3, 6])
+  })
+
+  it('keeps an unmodelled block in place, and lets it be removed', () => {
+    const e = blankEdid()
+    const cta = emptyCta()
+    cta.videoDescriptors = [{ vic: 16, native: true }]
+    cta.unknownBlocks = [[0x62, 0xaa, 0xbb]] // a tag-3 VSDB with an OUI nobody models
+    e.extensions.push(cta)
+    const built = [...encodeEdid(e).slice(128)]
+    // Move the unknown block in front, as a device might have it.
+    const hand = [...built]
+    hand.splice(4, 5, 0x62, 0xaa, 0xbb, 0x41, 0x90)
+    hand[127] = checksum(hand.slice(0, 127))
+    const ext = ctaOf(hand)
+    expect(reencode(ext)).toEqual(hand)
+    ext.speakerAllocation = 1
+    expect(dataBlocks(reencode(ext))[0]).toEqual([0x62, 0xaa, 0xbb])
+    ext.unknownBlocks = []
+    expect(dataBlocks(reencode(ext)).map((b) => b[0] >> 5)).toEqual([2, 4])
   })
 })
 
