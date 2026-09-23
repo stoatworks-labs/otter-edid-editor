@@ -19,6 +19,7 @@ import { SupportMatrix } from './components/SupportMatrix.tsx'
 import { HexView } from './components/HexView.tsx'
 import { Check, Panel, Pick } from './components/ui.tsx'
 import { HostPanel } from './components/HostPanel.tsx'
+import { MosaicApply } from './components/MosaicApply.tsx'
 import { encodeEdid } from './lib/edid/encode.ts'
 import type { EdidHost } from './host.ts'
 
@@ -212,6 +213,14 @@ export default function App({ host }: { host?: EdidHost } = {}) {
         {mode === 'mosaic' ? (
           <div>
             {host ? <HostPanel host={host} items={outgoing} preferred={host.initial?.slotId} /> : null}
+            {host?.mosaicTargets && host.applyMosaic && mosaic.result ? (
+              <MosaicApply
+                host={host}
+                mosaic={mosaic.result}
+                cols={mosaicReq.cols}
+                rows={mosaicReq.rows}
+              />
+            ) : null}
             <MosaicChecks checks={checkMosaic(mosaicReq)} />
             {mosaic.result && tile ? (
               <>

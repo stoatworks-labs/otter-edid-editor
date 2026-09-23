@@ -31,4 +31,37 @@ export interface EdidHost {
   save(slotId: string, bytes: Uint8Array): Promise<void>
   /** What to open with — a slot's bytes, when the editor was opened from one. */
   initial?: { bytes: Uint8Array; slotId?: string }
+  /**
+   * Where a cols x rows mosaic could go on the device — on a LivePremier, the
+   * first input of each run the switcher could group. Absent when the host
+   * cannot put a mosaic onto inputs; the editor then offers only the bank.
+   */
+  mosaicTargets?(cols: number, rows: number): MosaicTarget[]
+  /** Group the target's inputs and load each plug with its tile. Resolves with what happened. */
+  applyMosaic?(targetId: string, tiles: MosaicTileOut[]): Promise<MosaicApplyResult>
+}
+
+export interface MosaicTarget {
+  /** Passed back to `applyMosaic`: "IN_23". */
+  id: string
+  /** "IN_23 + IN_24 (DP, card IN_3)". */
+  label: string
+  ok: boolean
+  /** Why not, when `ok` is false. */
+  why?: string
+}
+
+export interface MosaicTileOut {
+  col: number
+  row: number
+  label: string
+  bytes: Uint8Array
+}
+
+export interface MosaicApplyResult {
+  ok: boolean
+  /** What was done, in order. */
+  steps: string[]
+  /** What is wrong afterwards — each one a sentence. Empty when a Mac should bond. */
+  problems: string[]
 }
