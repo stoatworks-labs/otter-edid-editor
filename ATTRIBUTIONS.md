@@ -1,59 +1,40 @@
 # Attributions
 
-Otter EDID Editor is built on other people's work. This file lists what that work is, who did
-it, and what it is doing here.
+## Standards
 
-It is generated — the master lists live in the `stoatworks-backend` repo and are
-pushed out by `scripts/sync-attributions.py`. Edit it there, not here.
+Implements VESA E-EDID, VESA DisplayID 1.3 and 2.0, VESA CVT, VESA GTF, VESA DMT and
+CTA-861. This project is not affiliated with or endorsed by VESA or CTA, and
+does not redistribute any part of those specifications.
 
-## Third-party code this project uses
+## Reference implementations consulted
 
-Libraries, SDKs and frameworks the project is built on or bundles.
+- **Linux kernel DRM** (GPL-2.0) — `drivers/gpu/drm/drm_displayid_internal.h`
+  and `drm_mode_displayid_detailed()` in `drivers/gpu/drm/drm_edid.c` were read
+  to confirm the DisplayID 2.0 section, block and Type VII descriptor layouts.
+  No kernel code is copied or derived; only the byte layout of a published
+  standard was confirmed against it.
+- **edid-decode** — its published reading of the HDMI Forum vendor-specific
+  data block informed the bit assignments in `src/lib/edid/cta861.ts`.
+- The same kernel sources (`struct displayid_tiled_block`,
+  `drm_parse_tiled_block()`) were read on 2026-09-23 to confirm the Tiled
+  Display Topology layout and the DisplayID 1.3 block tags.
 
-### Tauri
+## Mosaic reference
 
-<https://tauri.app>  
-Licence: MIT or Apache-2.0  
-Copyright: The Tauri Programme within The Commons Conservancy
+The base and CTA-861 blocks embedded in `src/lib/mosaic.ts` come from a PixelHue
+Q8's EDID, used as the known-good starting point for tiled EDIDs that a Mac will
+bond.
 
-A Cargo and npm dependency — of the app itself under src-tauri/, or of the desktop launcher under launcher/src-tauri/.
+## Vendor documentation
 
-Wraps a web front end in a native desktop app using the platform's own webview rather than a bundled browser, so the binary stays small.
+Device capability data is quoted, with attribution and a read date, in
+`src/lib/capability/devices.ts` and shown in the app. Sources include Analog
+Way, Barco, PixelHue, Brompton Technology, NovaStar, disguise and Green Hippo
+product documentation.
 
-### React
+Product and company names are used nominatively, to state compatibility only.
+This project is not affiliated with, authorised by or endorsed by any of them.
 
-<https://react.dev>  
-Licence: MIT  
-Copyright: Meta Platforms, Inc. and affiliates
+## Dependencies
 
-An npm dependency.
-
-The UI layer for the browser tools and the Electron and Tauri front ends.
-
-### The Rust crate ecosystem
-
-<https://crates.io>  
-Licence: predominantly MIT or Apache-2.0  
-Copyright: the individual crate authors
-
-Cargo dependencies, resolved and pinned in Cargo.lock.
-
-Async runtimes, protocol codecs, serialisation and GUI toolkits. The exact set and versions for any build are in that repo's Cargo.lock, which is the authoritative list.
-
-### The npm ecosystem
-
-<https://www.npmjs.com>  
-Licence: predominantly MIT  
-Copyright: the individual package authors
-
-npm dependencies, resolved and pinned in the lockfile.
-
-Build tooling, test runners and the libraries the front ends are assembled from. The exact set and versions for any build are in that repo's lockfile, which is the authoritative list.
-
-The full transitive dependency set for any build is pinned in this repo's lockfile,
-which is the authoritative list. What is named above is the layers a reader would
-want to know about, not every package that has ever been resolved.
-
-## Getting this wrong
-
-If your work is here and the description is inaccurate, the licence is wrong, or you would rather not be listed — open an issue and it will be fixed.
+React (MIT), Vite (MIT), TypeScript (Apache-2.0), Vitest (MIT).
