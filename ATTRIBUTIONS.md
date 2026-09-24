@@ -38,3 +38,6 @@ This project is not affiliated with, authorised by or endorsed by any of them.
 ## Dependencies
 
 React (MIT), Vite (MIT), TypeScript (Apache-2.0), Vitest (MIT).
+
+The desktop builds ship the launcher in `launcher/`, built on Tauri (MIT or
+Apache-2.0); its Rust crates are pinned in `launcher/src-tauri/Cargo.lock`.
