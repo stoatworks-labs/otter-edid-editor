@@ -1,4 +1,5 @@
-> **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code).
+> **AI-assisted project.** This codebase was created with [Claude](https://claude.com/claude-code)
+> (Anthropic), directed and reviewed by a human author.
 > The timing engine is checked against published VESA DMT values and the DisplayID Type VII layout
 > against the Linux kernel's own parser. **No EDID this tool produced has ever been loaded into a
 > display, a source or a processor**, and the twenty-one-model compatibility table is vendor
